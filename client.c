@@ -100,7 +100,7 @@ int main(int argc, char* argv[]) {
         //continue;
         // get input and send to server:
         printf("You: ");
-        fgets(input, sizeof(input), stdin);
+        fgets(input, sizeof(input), stdin); // fgets is a blocking call, so there are better way to implement chat server
 
         input[strcspn(input, "\n")] = 0; // find nl, replace with null terminator
 
