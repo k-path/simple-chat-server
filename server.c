@@ -14,6 +14,7 @@
 #include <errno.h>
 #include <sys/wait.h>
 #include <signal.h>
+#include <time.h>
 
 #define PORT "3490" // the port users will be connecting to 
 #define BACKLOG 10 // how many pending connections queue will hold
@@ -49,6 +50,19 @@ int main(void) {
     int numbytes;
     char buf[MAXDATASIZE];
     int active = 1;
+    const char* responses[] = { // list of possible responses
+        "Interesting point. Tell me more!",
+        "I've never thought about that before.",
+        "That's a great observation!",
+        "How long have you felt that way?",
+        "Let's discuss that further.",
+        "Go on...",
+        "I see what you mean.",
+        "That's fascinating!",
+        "I would love to talk!"
+    };
+    int num_responses = sizeof(responses) / sizeof(responses[0]); // divide total bytes of array by total bytes of single elem to get number of responses
+    srand(time(NULL));
 
     memset(&hints, 0, sizeof(hints));
     hints.ai_family = AF_UNSPEC;
@@ -65,6 +79,11 @@ int main(void) {
         if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
             perror("server: socket");
             continue; 
+        }
+
+        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
+            perror("setsockopt");
+            exit(1);
         }
 
         if ((bind(sockfd, p->ai_addr, p->ai_addrlen)) == -1) {
@@ -104,15 +123,23 @@ int main(void) {
             continue;
         }
 
+
         inet_ntop(their_addr.ss_family, get_in_addr((struct sockaddr *)&their_addr), s, sizeof(s));
         printf("server: got connection from %s\n", s);
+
+        // send initial message, connection confirmation, to client
+        if (send(new_fd, "You're connected!", 17, 0) == -1) {
+            perror("send");
+            continue;
+        } 
 
         if (!fork()) { // this is the child process
             // this is where conversation happens
             close(sockfd); // child doesnt need listener
 
             while (active) {
-                // receive msg from client
+                // receive msg from client:
+                memset(buf, 0, sizeof(buf));
                 numbytes = recv(new_fd, buf, MAXDATASIZE-1, 0);
 
                 // error and disconnection checking 
@@ -126,8 +153,8 @@ int main(void) {
                     continue; // skip to next iteration, which ends loop
                 }
 
-                // null terminate receive msg
-                buf[numbytes] = '\0';
+                
+                buf[numbytes] = '\0'; // null terminate receive msg
                 printf("server: received '%s'\n", buf);
 
                 // check for exit
@@ -137,8 +164,12 @@ int main(void) {
                     continue;
                 }
 
-                // process the message and send response
-                
+                // send back random response 
+                int random_index = rand() % num_responses;
+                if (send(new_fd, responses[random_index], strlen(responses[random_index]), 0) == -1) {
+                    perror("send");
+                    active = 0;
+                }
 
             }
 

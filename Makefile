@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-Wall -Wextra
 
-all: server client
+all: server client # need to modify so client takes a hostname
 
 server: server.c
 	$(CC) $(CFLAGS) -o server server.c
