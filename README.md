@@ -23,3 +23,5 @@ Run the executables:
 ./client hostname # like localhost
 ```
 
+Improvements: 
+- Use poll for synchronous I/O multiplexing (ability to monitor a bunch of sockets at once and then handle the ones that have data ready). 
